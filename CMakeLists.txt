@@ -84,6 +84,7 @@ set(LLVM_ALL_TARGETS
   Sparc
   X86
   XCore
+  XNCM
   )
 
 # List of targets with JIT support:

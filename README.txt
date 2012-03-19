@@ -1,4 +1,16 @@
 
+LLVM Backend for the XNCM Architecture
+======================================
+
+** This is work in progress ** come back later **
+
+Quick build guide:
+
+	$ mkdir obj; cd obj
+	$ cmake ..
+	$ make
+
+
 Low Level Virtual Machine (LLVM)
 ================================
 
