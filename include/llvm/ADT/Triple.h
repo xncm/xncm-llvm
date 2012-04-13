@@ -61,6 +61,7 @@ public:
     x86,     // X86: i[3-9]86
     x86_64,  // X86-64: amd64, x86_64
     xcore,   // XCore: xcore
+    xncm,    // XNCM: xncm
     mblaze,  // MBlaze: mblaze
     ptx32,   // PTX: ptx (32-bit)
     ptx64,   // PTX: ptx (64-bit)

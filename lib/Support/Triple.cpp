@@ -37,6 +37,7 @@ const char *Triple::getArchTypeName(ArchType Kind) {
   case x86:     return "i386";
   case x86_64:  return "x86_64";
   case xcore:   return "xcore";
+  case xncm:    return "xncm";
   case mblaze:  return "mblaze";
   case ptx32:   return "ptx32";
   case ptx64:   return "ptx64";
@@ -636,6 +637,7 @@ static unsigned getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
     return 0;
 
   case llvm::Triple::msp430:
+  case llvm::Triple::xncm:
     return 16;
 
   case llvm::Triple::amdil:
@@ -684,6 +686,7 @@ Triple Triple::get32BitArchVariant() const {
   switch (getArch()) {
   case Triple::UnknownArch:
   case Triple::msp430:
+  case Triple::xncm:
     T.setArch(UnknownArch);
     break;
 
@@ -731,6 +734,7 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::tce:
   case Triple::thumb:
   case Triple::xcore:
+  case Triple::xncm:
     T.setArch(UnknownArch);
     break;
 

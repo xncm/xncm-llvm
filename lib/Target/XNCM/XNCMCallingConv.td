@@ -1,0 +1,37 @@
+//==- XNCMCallingConv.td - Calling Conventions for XNCM -*- tablegen -*-==//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+// This describes the calling conventions for XNCM architecture.
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+// XNCM Return Value Calling Convention
+//===----------------------------------------------------------------------===//
+def RetCC_XNCM : CallingConv<[
+  // i8 are returned in registers R15B, R14B, R13B, R12B
+  CCIfType<[i8], CCAssignToReg<[R15B, R14B, R13B, R12B]>>,
+
+  // i16 are returned in registers R15, R14, R13, R12
+  CCIfType<[i16], CCAssignToReg<[R15W, R14W, R13W, R12W]>>
+]>;
+
+//===----------------------------------------------------------------------===//
+// XNCM Argument Calling Conventions
+//===----------------------------------------------------------------------===//
+def CC_XNCM : CallingConv<[
+  // Promote i8 arguments to i16.
+  CCIfType<[i8], CCPromoteToType<i16>>,
+
+  // The first 4 integer arguments of non-varargs functions are passed in
+  // integer registers.
+  CCIfNotVarArg<CCIfType<[i16], CCAssignToReg<[R15W, R14W, R13W, R12W]>>>,
+
+  // Integer values get stored in stack slots that are 2 bytes in
+  // size and 2-byte aligned.
+  CCIfType<[i16], CCAssignToStack<2, 2>>
+]>;

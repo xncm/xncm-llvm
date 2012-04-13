@@ -1,4 +1,4 @@
-;===- ./lib/Target/XNCM/LLVMBuild.txt ------------------------*- Conf -*--===;
+;===- ./lib/Target/XNCM/MCTargetDesc/LLVMBuild.txt -----------*- Conf -*--===;
 ;
 ;                     The LLVM Compiler Infrastructure
 ;
@@ -15,18 +15,9 @@
 ;
 ;===------------------------------------------------------------------------===;
 
-[common]
-subdirectories = InstPrinter MCTargetDesc TargetInfo
-
 [component_0]
-type = TargetGroup
-name = XNCM
-parent = Target
-has_asmprinter = 1
-
-[component_1]
 type = Library
-name = XNCMCodeGen
+name = XNCMDesc
 parent = XNCM
-required_libraries = AsmPrinter CodeGen Core MC XNCMAsmPrinter XNCMDesc XNCMInfo SelectionDAG Support Target
+required_libraries = MC XNCMAsmPrinter XNCMInfo Support Target
 add_to_library_groups = XNCM
