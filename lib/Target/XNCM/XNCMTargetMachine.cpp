@@ -65,7 +65,5 @@ bool XNCMPassConfig::addInstSelector() {
 }
 
 bool XNCMPassConfig::addPreEmitPass() {
-  // Must run branch selection immediately preceding the asm printer.
-  PM.add(createXNCMBranchSelectionPass());
   return false;
 }

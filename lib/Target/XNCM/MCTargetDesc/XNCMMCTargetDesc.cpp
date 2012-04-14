@@ -39,7 +39,7 @@ static MCInstrInfo *createXNCMMCInstrInfo() {
 
 static MCRegisterInfo *createXNCMMCRegisterInfo(StringRef TT) {
   MCRegisterInfo *X = new MCRegisterInfo();
-  InitXNCMMCRegisterInfo(X, XNCM::PCW);
+  InitXNCMMCRegisterInfo(X, XNCM::IP);
   return X;
 }
 

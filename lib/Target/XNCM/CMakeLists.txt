@@ -9,7 +9,6 @@ tablegen(LLVM XNCMGenSubtargetInfo.inc -gen-subtarget)
 add_public_tablegen_target(XNCMCommonTableGen)
 
 add_llvm_target(XNCMCodeGen
-  XNCMBranchSelector.cpp
   XNCMISelDAGToDAG.cpp
   XNCMISelLowering.cpp
   XNCMInstrInfo.cpp

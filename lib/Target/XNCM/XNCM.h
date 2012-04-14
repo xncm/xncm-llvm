@@ -40,8 +40,6 @@ namespace llvm {
   FunctionPass *createXNCMISelDag(XNCMTargetMachine &TM,
                                     CodeGenOpt::Level OptLevel);
 
-  FunctionPass *createXNCMBranchSelectionPass();
-
 } // end namespace llvm;
 
 #endif

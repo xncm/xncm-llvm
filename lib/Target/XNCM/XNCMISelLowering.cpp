@@ -75,7 +75,7 @@ XNCMTargetLowering::XNCMTargetLowering(XNCMTargetMachine &tm) :
   // Division is expensive
   setIntDivIsCheap(false);
 
-  setStackPointerRegisterToSaveRestore(XNCM::SPW);
+  setStackPointerRegisterToSaveRestore(XNCM::SP);
   setBooleanContents(ZeroOrOneBooleanContent);
   setBooleanVectorContents(ZeroOrOneBooleanContent); // FIXME: Is this correct?
 
@@ -186,12 +186,9 @@ SDValue XNCMTargetLowering::LowerOperation(SDValue Op,
   case ISD::GlobalAddress:    return LowerGlobalAddress(Op, DAG);
   case ISD::BlockAddress:     return LowerBlockAddress(Op, DAG);
   case ISD::ExternalSymbol:   return LowerExternalSymbol(Op, DAG);
-  case ISD::SETCC:            return LowerSETCC(Op, DAG);
   case ISD::BR_CC:            return LowerBR_CC(Op, DAG);
   case ISD::SELECT_CC:        return LowerSELECT_CC(Op, DAG);
   case ISD::SIGN_EXTEND:      return LowerSIGN_EXTEND(Op, DAG);
-  case ISD::RETURNADDR:       return LowerRETURNADDR(Op, DAG);
-  case ISD::FRAMEADDR:        return LowerFRAMEADDR(Op, DAG);
   default:
     llvm_unreachable("unimplemented operand");
   }
@@ -477,7 +474,7 @@ XNCMTargetLowering::LowerCCCCallTo(SDValue Chain, SDValue Callee,
       assert(VA.isMemLoc());
 
       if (StackPtr.getNode() == 0)
-        StackPtr = DAG.getCopyFromReg(Chain, dl, XNCM::SPW, getPointerTy());
+        StackPtr = DAG.getCopyFromReg(Chain, dl, XNCM::SP, getPointerTy());
 
       SDValue PtrOff = DAG.getNode(ISD::ADD, dl, getPointerTy(),
                                    StackPtr,
@@ -743,86 +740,6 @@ SDValue XNCMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
                      Chain, Dest, TargetCC, Flag);
 }
 
-SDValue XNCMTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
-  SDValue LHS   = Op.getOperand(0);
-  SDValue RHS   = Op.getOperand(1);
-  DebugLoc dl   = Op.getDebugLoc();
-
-  // If we are doing an AND and testing against zero, then the CMP
-  // will not be generated.  The AND (or BIT) will generate the condition codes,
-  // but they are different from CMP.
-  // FIXME: since we're doing a post-processing, use a pseudoinstr here, so
-  // lowering & isel wouldn't diverge.
-  bool andCC = false;
-  if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS)) {
-    if (RHSC->isNullValue() && LHS.hasOneUse() &&
-        (LHS.getOpcode() == ISD::AND ||
-         (LHS.getOpcode() == ISD::TRUNCATE &&
-          LHS.getOperand(0).getOpcode() == ISD::AND))) {
-      andCC = true;
-    }
-  }
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
-  SDValue TargetCC;
-  SDValue Flag = EmitCMP(LHS, RHS, TargetCC, CC, dl, DAG);
-
-  // Get the condition codes directly from the status register, if its easy.
-  // Otherwise a branch will be generated.  Note that the AND and BIT
-  // instructions generate different flags than CMP, the carry bit can be used
-  // for NE/EQ.
-  bool Invert = false;
-  bool Shift = false;
-  bool Convert = true;
-  switch (cast<ConstantSDNode>(TargetCC)->getZExtValue()) {
-   default:
-    Convert = false;
-    break;
-   case XNCMCC::COND_HS:
-     // Res = SRW & 1, no processing is required
-     break;
-   case XNCMCC::COND_LO:
-     // Res = ~(SRW & 1)
-     Invert = true;
-     break;
-   case XNCMCC::COND_NE:
-     if (andCC) {
-       // C = ~Z, thus Res = SRW & 1, no processing is required
-     } else {
-       // Res = ~((SRW >> 1) & 1)
-       Shift = true;
-       Invert = true;
-     }
-     break;
-   case XNCMCC::COND_E:
-     Shift = true;
-     // C = ~Z for AND instruction, thus we can put Res = ~(SRW & 1), however,
-     // Res = (SRW >> 1) & 1 is 1 word shorter.
-     break;
-  }
-  EVT VT = Op.getValueType();
-  SDValue One  = DAG.getConstant(1, VT);
-  if (Convert) {
-    SDValue SR = DAG.getCopyFromReg(DAG.getEntryNode(), dl, XNCM::SRW,
-                                    MVT::i16, Flag);
-    if (Shift)
-      // FIXME: somewhere this is turned into a SRL, lower it MSP specific?
-      SR = DAG.getNode(ISD::SRA, dl, MVT::i16, SR, One);
-    SR = DAG.getNode(ISD::AND, dl, MVT::i16, SR, One);
-    if (Invert)
-      SR = DAG.getNode(ISD::XOR, dl, MVT::i16, SR, One);
-    return SR;
-  } else {
-    SDValue Zero = DAG.getConstant(0, VT);
-    SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
-    SmallVector<SDValue, 4> Ops;
-    Ops.push_back(One);
-    Ops.push_back(Zero);
-    Ops.push_back(TargetCC);
-    Ops.push_back(Flag);
-    return DAG.getNode(XNCMISD::SELECT_CC, dl, VTs, &Ops[0], Ops.size());
-  }
-}
-
 SDValue XNCMTargetLowering::LowerSELECT_CC(SDValue Op,
                                              SelectionDAG &DAG) const {
   SDValue LHS    = Op.getOperand(0);
@@ -873,47 +790,6 @@ XNCMTargetLowering::getReturnAddressFrameIndex(SelectionDAG &DAG) const {
   }
 
   return DAG.getFrameIndex(ReturnAddrIndex, getPointerTy());
-}
-
-SDValue XNCMTargetLowering::LowerRETURNADDR(SDValue Op,
-                                              SelectionDAG &DAG) const {
-  MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
-  MFI->setReturnAddressIsTaken(true);
-
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
-  DebugLoc dl = Op.getDebugLoc();
-
-  if (Depth > 0) {
-    SDValue FrameAddr = LowerFRAMEADDR(Op, DAG);
-    SDValue Offset =
-      DAG.getConstant(TD->getPointerSize(), MVT::i16);
-    return DAG.getLoad(getPointerTy(), dl, DAG.getEntryNode(),
-                       DAG.getNode(ISD::ADD, dl, getPointerTy(),
-                                   FrameAddr, Offset),
-                       MachinePointerInfo(), false, false, false, 0);
-  }
-
-  // Just load the return address.
-  SDValue RetAddrFI = getReturnAddressFrameIndex(DAG);
-  return DAG.getLoad(getPointerTy(), dl, DAG.getEntryNode(),
-                     RetAddrFI, MachinePointerInfo(), false, false, false, 0);
-}
-
-SDValue XNCMTargetLowering::LowerFRAMEADDR(SDValue Op,
-                                             SelectionDAG &DAG) const {
-  MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
-  MFI->setFrameAddressIsTaken(true);
-
-  EVT VT = Op.getValueType();
-  DebugLoc dl = Op.getDebugLoc();  // FIXME probably not meaningful
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
-  SDValue FrameAddr = DAG.getCopyFromReg(DAG.getEntryNode(), dl,
-                                         XNCM::FPW, VT);
-  while (Depth--)
-    FrameAddr = DAG.getLoad(VT, dl, DAG.getEntryNode(), FrameAddr,
-                            MachinePointerInfo(),
-                            false, false, false, 0);
-  return FrameAddr;
 }
 
 /// getPostIndexedAddressParts - returns true by value, base pointer and
@@ -995,185 +871,3 @@ bool XNCMTargetLowering::isZExtFree(EVT VT1, EVT VT2) const {
   return 0 && VT1 == MVT::i8 && VT2 == MVT::i16;
 }
 
-//===----------------------------------------------------------------------===//
-//  Other Lowering Code
-//===----------------------------------------------------------------------===//
-
-MachineBasicBlock*
-XNCMTargetLowering::EmitShiftInstr(MachineInstr *MI,
-                                     MachineBasicBlock *BB) const {
-  MachineFunction *F = BB->getParent();
-  MachineRegisterInfo &RI = F->getRegInfo();
-  DebugLoc dl = MI->getDebugLoc();
-  const TargetInstrInfo &TII = *getTargetMachine().getInstrInfo();
-
-  unsigned Opc;
-  const TargetRegisterClass * RC;
-  switch (MI->getOpcode()) {
-  default: llvm_unreachable("Invalid shift opcode!");
-  case XNCM::Shl8:
-   Opc = XNCM::SHL8r1;
-   RC = XNCM::GR8RegisterClass;
-   break;
-  case XNCM::Shl16:
-   Opc = XNCM::SHL16r1;
-   RC = XNCM::GR16RegisterClass;
-   break;
-  case XNCM::Sra8:
-   Opc = XNCM::SAR8r1;
-   RC = XNCM::GR8RegisterClass;
-   break;
-  case XNCM::Sra16:
-   Opc = XNCM::SAR16r1;
-   RC = XNCM::GR16RegisterClass;
-   break;
-  case XNCM::Srl8:
-   Opc = XNCM::SAR8r1c;
-   RC = XNCM::GR8RegisterClass;
-   break;
-  case XNCM::Srl16:
-   Opc = XNCM::SAR16r1c;
-   RC = XNCM::GR16RegisterClass;
-   break;
-  }
-
-  const BasicBlock *LLVM_BB = BB->getBasicBlock();
-  MachineFunction::iterator I = BB;
-  ++I;
-
-  // Create loop block
-  MachineBasicBlock *LoopBB = F->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *RemBB  = F->CreateMachineBasicBlock(LLVM_BB);
-
-  F->insert(I, LoopBB);
-  F->insert(I, RemBB);
-
-  // Update machine-CFG edges by transferring all successors of the current
-  // block to the block containing instructions after shift.
-  RemBB->splice(RemBB->begin(), BB,
-                llvm::next(MachineBasicBlock::iterator(MI)),
-                BB->end());
-  RemBB->transferSuccessorsAndUpdatePHIs(BB);
-
-  // Add adges BB => LoopBB => RemBB, BB => RemBB, LoopBB => LoopBB
-  BB->addSuccessor(LoopBB);
-  BB->addSuccessor(RemBB);
-  LoopBB->addSuccessor(RemBB);
-  LoopBB->addSuccessor(LoopBB);
-
-  unsigned ShiftAmtReg = RI.createVirtualRegister(XNCM::GR8RegisterClass);
-  unsigned ShiftAmtReg2 = RI.createVirtualRegister(XNCM::GR8RegisterClass);
-  unsigned ShiftReg = RI.createVirtualRegister(RC);
-  unsigned ShiftReg2 = RI.createVirtualRegister(RC);
-  unsigned ShiftAmtSrcReg = MI->getOperand(2).getReg();
-  unsigned SrcReg = MI->getOperand(1).getReg();
-  unsigned DstReg = MI->getOperand(0).getReg();
-
-  // BB:
-  // cmp 0, N
-  // je RemBB
-  BuildMI(BB, dl, TII.get(XNCM::CMP8ri))
-    .addReg(ShiftAmtSrcReg).addImm(0);
-  BuildMI(BB, dl, TII.get(XNCM::JCC))
-    .addMBB(RemBB)
-    .addImm(XNCMCC::COND_E);
-
-  // LoopBB:
-  // ShiftReg = phi [%SrcReg, BB], [%ShiftReg2, LoopBB]
-  // ShiftAmt = phi [%N, BB],      [%ShiftAmt2, LoopBB]
-  // ShiftReg2 = shift ShiftReg
-  // ShiftAmt2 = ShiftAmt - 1;
-  BuildMI(LoopBB, dl, TII.get(XNCM::PHI), ShiftReg)
-    .addReg(SrcReg).addMBB(BB)
-    .addReg(ShiftReg2).addMBB(LoopBB);
-  BuildMI(LoopBB, dl, TII.get(XNCM::PHI), ShiftAmtReg)
-    .addReg(ShiftAmtSrcReg).addMBB(BB)
-    .addReg(ShiftAmtReg2).addMBB(LoopBB);
-  BuildMI(LoopBB, dl, TII.get(Opc), ShiftReg2)
-    .addReg(ShiftReg);
-  BuildMI(LoopBB, dl, TII.get(XNCM::SUB8ri), ShiftAmtReg2)
-    .addReg(ShiftAmtReg).addImm(1);
-  BuildMI(LoopBB, dl, TII.get(XNCM::JCC))
-    .addMBB(LoopBB)
-    .addImm(XNCMCC::COND_NE);
-
-  // RemBB:
-  // DestReg = phi [%SrcReg, BB], [%ShiftReg, LoopBB]
-  BuildMI(*RemBB, RemBB->begin(), dl, TII.get(XNCM::PHI), DstReg)
-    .addReg(SrcReg).addMBB(BB)
-    .addReg(ShiftReg2).addMBB(LoopBB);
-
-  MI->eraseFromParent();   // The pseudo instruction is gone now.
-  return RemBB;
-}
-
-MachineBasicBlock*
-XNCMTargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
-                                                  MachineBasicBlock *BB) const {
-  unsigned Opc = MI->getOpcode();
-
-  if (Opc == XNCM::Shl8 || Opc == XNCM::Shl16 ||
-      Opc == XNCM::Sra8 || Opc == XNCM::Sra16 ||
-      Opc == XNCM::Srl8 || Opc == XNCM::Srl16)
-    return EmitShiftInstr(MI, BB);
-
-  const TargetInstrInfo &TII = *getTargetMachine().getInstrInfo();
-  DebugLoc dl = MI->getDebugLoc();
-
-  assert((Opc == XNCM::Select16 || Opc == XNCM::Select8) &&
-         "Unexpected instr type to insert");
-
-  // To "insert" a SELECT instruction, we actually have to insert the diamond
-  // control-flow pattern.  The incoming instruction knows the destination vreg
-  // to set, the condition code register to branch on, the true/false values to
-  // select between, and a branch opcode to use.
-  const BasicBlock *LLVM_BB = BB->getBasicBlock();
-  MachineFunction::iterator I = BB;
-  ++I;
-
-  //  thisMBB:
-  //  ...
-  //   TrueVal = ...
-  //   cmpTY ccX, r1, r2
-  //   jCC copy1MBB
-  //   fallthrough --> copy0MBB
-  MachineBasicBlock *thisMBB = BB;
-  MachineFunction *F = BB->getParent();
-  MachineBasicBlock *copy0MBB = F->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *copy1MBB = F->CreateMachineBasicBlock(LLVM_BB);
-  F->insert(I, copy0MBB);
-  F->insert(I, copy1MBB);
-  // Update machine-CFG edges by transferring all successors of the current
-  // block to the new block which will contain the Phi node for the select.
-  copy1MBB->splice(copy1MBB->begin(), BB,
-                   llvm::next(MachineBasicBlock::iterator(MI)),
-                   BB->end());
-  copy1MBB->transferSuccessorsAndUpdatePHIs(BB);
-  // Next, add the true and fallthrough blocks as its successors.
-  BB->addSuccessor(copy0MBB);
-  BB->addSuccessor(copy1MBB);
-
-  BuildMI(BB, dl, TII.get(XNCM::JCC))
-    .addMBB(copy1MBB)
-    .addImm(MI->getOperand(3).getImm());
-
-  //  copy0MBB:
-  //   %FalseValue = ...
-  //   # fallthrough to copy1MBB
-  BB = copy0MBB;
-
-  // Update machine-CFG edges
-  BB->addSuccessor(copy1MBB);
-
-  //  copy1MBB:
-  //   %Result = phi [ %FalseValue, copy0MBB ], [ %TrueValue, thisMBB ]
-  //  ...
-  BB = copy1MBB;
-  BuildMI(*BB, BB->begin(), dl, TII.get(XNCM::PHI),
-          MI->getOperand(0).getReg())
-    .addReg(MI->getOperand(2).getReg()).addMBB(copy0MBB)
-    .addReg(MI->getOperand(1).getReg()).addMBB(thisMBB);
-
-  MI->eraseFromParent();   // The pseudo instruction is gone now.
-  return BB;
-}

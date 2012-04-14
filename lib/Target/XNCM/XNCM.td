@@ -16,13 +16,6 @@
 include "llvm/Target/Target.td"
 
 //===----------------------------------------------------------------------===//
-// Subtarget Features. 
-//===----------------------------------------------------------------------===//
-def FeatureX
- : SubtargetFeature<"ext", "ExtendedInsts", "true",
-                    "Enable XNCM-X extensions">;
-
-//===----------------------------------------------------------------------===//
 // XNCM supported processors.
 //===----------------------------------------------------------------------===//
 class Proc<string Name, list<SubtargetFeature> Features>
