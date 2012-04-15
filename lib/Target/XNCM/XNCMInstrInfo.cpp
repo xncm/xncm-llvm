@@ -54,10 +54,6 @@ void XNCMInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   llvm_unreachable("Impossible reg-to-reg copy");
 }
 
-unsigned XNCMInstrInfo::RemoveBranch(MachineBasicBlock &MBB) const {
-  llvm_unreachable(0);
-}
-
 bool XNCMInstrInfo::
 ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
   assert(Cond.size() == 1 && "Invalid Xbranch condition!");
@@ -99,22 +95,6 @@ bool XNCMInstrInfo::isUnpredicatedTerminator(const MachineInstr *MI) const {
   if (!MI->isPredicable())
     return true;
   return !isPredicated(MI);
-}
-
-bool XNCMInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
-                                    MachineBasicBlock *&TBB,
-                                    MachineBasicBlock *&FBB,
-                                    SmallVectorImpl<MachineOperand> &Cond,
-                                    bool AllowModify) const {
-  llvm_unreachable(0);
-}
-
-unsigned
-XNCMInstrInfo::InsertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
-                              MachineBasicBlock *FBB,
-                              const SmallVectorImpl<MachineOperand> &Cond,
-                              DebugLoc DL) const {
-  llvm_unreachable(0);
 }
 
 /// GetInstSize - Return the number of bytes of code the specified

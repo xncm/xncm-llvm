@@ -382,7 +382,7 @@ SDNode *XNCMDAGToDAGISel::SelectIndexedBinOp(SDNode *Op,
 
 
 SDNode *XNCMDAGToDAGISel::Select(SDNode *Node) {
-  DebugLoc dl = Node->getDebugLoc();
+  //DebugLoc dl = Node->getDebugLoc();
 
   // Dump information about the Node being selected
   DEBUG(errs() << "Selecting: ");

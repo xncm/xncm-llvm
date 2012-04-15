@@ -48,7 +48,7 @@ BitVector XNCMRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
 
   // Mark special registers with subregisters as reserved.
-  Reserved.set(XNCM::PC);
+  Reserved.set(XNCM::IP);
   Reserved.set(XNCM::SP);
   Reserved.set(XNCM::LR);
 

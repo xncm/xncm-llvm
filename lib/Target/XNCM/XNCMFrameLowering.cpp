@@ -68,7 +68,6 @@ XNCMFrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB,
     MBB.addLiveIn(Reg);
     // FIXME: BuildMI(MBB, MI, DL, TII.get(XNCM::PUSH16r))
     //          .addReg(Reg, RegState::Kill);
-    llvm_unreachable(0);
   }
   return true;
 }
@@ -89,7 +88,6 @@ XNCMFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
 
   for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
     // FIXME: BuildMI(MBB, MI, DL, TII.get(XNCM::POP16r), CSI[i].getReg());
-    llvm_unreachable(0);
   }
 
   return true;
