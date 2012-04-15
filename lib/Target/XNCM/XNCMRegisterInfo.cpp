@@ -40,25 +40,17 @@ XNCMRegisterInfo::XNCMRegisterInfo(XNCMTargetMachine &tm,
 
 const uint16_t*
 XNCMRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
-  static const uint16_t CalleeSavedRegs[] = {
-    XNCM::Y, XNCM::YL, XNCM::YH,
-    0
-  };
+  static const uint16_t CalleeSavedRegs[] = { XNCM::LR, 0 };
   return CalleeSavedRegs;
 }
 
 BitVector XNCMRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
 
-  // Mark 4 special registers with subregisters as reserved.
-  //Reserved.set(XNCM::PCB);
-  //Reserved.set(XNCM::SPB);
-  //Reserved.set(XNCM::SRB);
-  //Reserved.set(XNCM::CGB);
-  //Reserved.set(XNCM::PCW);
-  //Reserved.set(XNCM::SPW);
-  //Reserved.set(XNCM::SRW);
-  //Reserved.set(XNCM::CGW);
+  // Mark special registers with subregisters as reserved.
+  Reserved.set(XNCM::PC);
+  Reserved.set(XNCM::SP);
+  Reserved.set(XNCM::LR);
 
   return Reserved;
 }

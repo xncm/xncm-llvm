@@ -49,16 +49,15 @@ def XNCMcallseq_end :
 // a stack adjustment and the codegen must know that they may modify the stack
 // pointer before prolog-epilog rewriting occurs.
 let Defs = [SP] in {
-	def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i16imm:$amt),
+	def ADJCALLSTACKDOWN : XNCMInst<(outs), (ins i16imm:$amt),
 				      "#ADJCALLSTACKDOWN",
 				      [(XNCMcallseq_start timm:$amt)]>;
-	def ADJCALLSTACKUP   : Pseudo<(outs), (ins i16imm:$amt1, i16imm:$amt2),
+	def ADJCALLSTACKUP   : XNCMInst<(outs), (ins i16imm:$amt1, i16imm:$amt2),
 				      "#ADJCALLSTACKUP",
 				      [(XNCMcallseq_end timm:$amt1, timm:$amt2)]>;
 }
 
 let Uses = [LR], isReturn = 1, isTerminator = 1, isBarrier = 1 in {
-	def RET  : IForm16<0x0, DstReg, SrcPostInc, Size2Bytes,
-                     (outs), (ins), "ret",  [(XNCMretflag)]>;
+	def RET  : XNCMInst<(outs), (ins), "ret", [(XNCMretflag)]>;
 }
 

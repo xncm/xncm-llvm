@@ -10,6 +10,10 @@ Quick build guide:
 	$ cmake ..
 	$ make
 
+Quick and most simple test:
+
+	$ echo -e 'define void @foo() {\nret void\n}' | ./bin/llc -mtriple=xncm
+
 
 Low Level Virtual Machine (LLVM)
 ================================
