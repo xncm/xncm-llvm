@@ -12,7 +12,7 @@ Quick build guide:
 
 Quick and most simple test:
 
-	$ echo -e 'define void @foo() {\nret void\n}' | ./bin/llc -mtriple=xncm
+	$ ./bin/llc -mtriple=xncm < ../xncm-test/000_retvoid.ll
 
 
 Low Level Virtual Machine (LLVM)
